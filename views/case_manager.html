@@ -1,0 +1,126 @@
+{{template "head.html" .}}
+
+<div style="margin:1%">
+
+<table class="layui-table" lay-data="{url:'/case/get_all_cases?business={{.business}}', page:true, limit:20 ,id:'idTest'}" lay-filter="demo">
+    <thead>
+    <tr>
+        <th lay-data="{type:'checkbox', fixed: 'left'}"></th>
+        <th lay-data="{field:'id', width:80, sort: true, fixed: true}">ID</th>
+        <th lay-data="{field:'business_name', width:100}">业务线</th>
+        <th lay-data="{field:'service_name', width:150}">服务名称</th>
+        <th lay-data="{field:'case_name', width:120, sort: true}">用例名称</th>
+        <th lay-data="{field:'description'}">用例描述</th>
+        <th lay-data="{field:'author'}">添加人</th>
+        <th lay-data="{field:'api_url', width:150}">接口数据</th>
+        <th lay-data="{field:'test_env', width:120}">测试环境</th>
+        <th lay-data="{field:'request_method', width:135, sort: true}">请求方式</th>
+        <th lay-data="{field:'parameter', width:135, sort: true}">参数</th>
+        <th lay-data="{field:'check_point', width:135, sort: true}">检查点</th>
+        <th lay-data="{field:'level', width:80, sort: true, fixed: 'right'}">等级</th>
+        <th lay-data="{fixed: 'right', width:178, align:'center', toolbar: '#barDemo'}">操作</th>
+    </tr>
+    </thead>
+</table>
+<div class="layui-btn-group demoTable" style="padding-left: 45%">
+    <button class="layui-btn layui-bg-blue" data-type="getCheckData">运行选中测试用例</button>
+    <!--    <button class="layui-btn layui-bg-blue" data-type="getCheckLength">获取选中数目</button>-->
+    <!--    <button class="layui-btn layui-bg-blue"  data-type="isAll">验证是否全选</button>-->
+</div>
+
+<script type="text/html" id="barDemo">
+<!--    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="run">运行</a>-->
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑/调试</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+<script src="/static/layui/layui.js" charset="utf-8"></script>
+
+<script>
+    layui.use('table', function(){
+        var table = layui.table;
+        //监听表格复选框选择
+        table.on('checkbox(demo)', function(obj){
+            console.log(obj)
+        });
+        //监听工具条
+        table.on('tool(demo)', function(obj){
+            var data = obj.data;
+            if(obj.event === 'detail'){
+                layer.msg('ID：'+ data.id + ' 的查看操作');
+            } else if(obj.event === 'del'){
+                layer.confirm('真的删除行么', function(index){
+                    // obj.del();
+                    $.ajax({
+                        type: 'POST',
+                        url: "/case/del_one_case",
+                        async:false,
+                        timeout : 500000,
+                        data: {
+                            "id": data.id,
+                        }
+                    });
+                    layer.close(index);
+                    window.location.reload()
+                });
+            } else if(obj.event === 'edit'){
+                window.location.href="/case/show_edit_case?id="+data.id+"&business={{.business}}"
+            } else if(obj.event === "run"){
+                var arr = new Array()
+                arr.push(data.id)
+                // alert(arr.toString())
+                $.ajax({
+                    type: 'POST',
+                    url: "/case/do_test",
+                    async:false,
+                    timeout : 500000,
+                    data: {
+                            "case_id": arr.toString(),
+                    }
+                })
+            }
+        });
+
+        var $ = layui.$, active = {
+            getCheckData: function(){ //获取选中数据
+                var checkStatus = table.checkStatus('idTest'),
+                    data = checkStatus.data,
+                    arr_id = new Array();
+                for(var i = 0;i<data.length;i++){
+                    arr_id.push(data[i].id)
+                }
+                alert(arr_id)
+                // 提交列表形式的id
+                $.ajax({
+                    type: 'POST',
+                    contentType: "application/json",
+                    dataType:"json",
+                    url: "/auto/perform_tests",
+                    async:false,
+                    timeout : 500000,
+                    data: JSON.stringify({
+                        "ids": arr_id,
+                    })
+                })
+                window.location.href="/case/show_report"
+            }
+            ,getCheckLength: function(){ //获取选中数目
+                var checkStatus = table.checkStatus('idTest')
+                    ,data = checkStatus.data;
+                layer.msg('选中了：'+ data.length + ' 个');
+            }
+            ,isAll: function(){ //验证是否全选
+                var checkStatus = table.checkStatus('idTest');
+                layer.msg(checkStatus.isAll ? '全选': '未全选')
+            }
+        };
+
+        $('.demoTable .layui-btn').on('click', function(){
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+    });
+</script>
+</div>
+</body>
+</html>
